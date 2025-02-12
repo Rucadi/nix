@@ -42,6 +42,8 @@ if get_option('bindings') and not meson.is_cross_build()
   subproject('perl')
 endif
 
+subproject('nix-pybind')
+
 # Testing
 if get_option('unit-tests')
   subproject('libutil-test-support')
