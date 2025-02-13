@@ -4,6 +4,7 @@
 #include <nix_api_store.h>
 #include <nix_api_expr.h>
 #include <nix_api_value.h>
+
 #include <pybind11/stl.h>
 #include <pybind11/pybind11.h>
 namespace py = pybind11;
@@ -48,12 +49,10 @@ void init_libutil(py::module_ &m) {
         .export_values();  // Expose the values to Python
 
     py::class_<nix_c_context>(m, "nix_c_context")
-        .def(py::init<>())
         .def_readwrite("last_err_code", &nix_c_context::last_err_code)
         .def_readwrite("last_err", &nix_c_context::last_err)
         .def_readwrite("info", &nix_c_context::info)
         .def_readwrite("name", &nix_c_context::name);
-
 
     //nix_c_context * nix_c_context_create();
     m.def("nix_c_context_create", &nix_c_context_create, "Create a new nix context");

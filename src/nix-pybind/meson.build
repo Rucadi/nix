@@ -23,6 +23,8 @@ deps_private_maybe_subproject = [
   dependency('nix-util'),
   dependency('nix-store'),
   dependency('nix-expr'),
+  dependency('nix-flake'),
+  dependency('nix-main'),
 ]
 
 deps_public_maybe_subproject = [
@@ -30,6 +32,7 @@ deps_public_maybe_subproject = [
   dependency('nix-store-c'),
   dependency('nix-expr-c'),
   dependency('nix-flake-c'),
+  dependency('nix-main-c'),
 ]
 
 subdir('nix-meson-build-support/subprojects')
@@ -44,7 +47,9 @@ configdata.set_quoted('PACKAGE_VERSION', meson.project_version())
 # Define sources for each binding module
 sources = [
     'bindings/bindings.cpp',
+    'bindings/libstore_bindings.cpp',
     'bindings/libutil_bindings.cpp',
+    'bindings/libexpr_bindings.cpp',
 ]
 
 # Include paths for Nix libraries
