@@ -77,6 +77,8 @@ nix_err nix_store_realise_wrapper(nix_c_context* context,
 
 void init_libstore(py::module_ & m)
 {
+    py::class_<Store>(m, "Store");
+
     //nix_err nix_libstore_init(nix_c_context * context);
     m.def("nix_libstore_init", &nix_libstore_init);
     //nix_err nix_libstore_init_no_load_config(nix_c_context * context);
@@ -93,7 +95,7 @@ void init_libstore(py::module_ & m)
     //nix_err nix_store_get_uri(nix_c_context * context, Store * store, nix_get_string_callback callback, void * user_data);
     m.def("nix_store_get_uri", &nix_store_get_uri_wrapper, "Get the URI of a Nix store");
     //nix_err nix_store_get_storedir(nix_c_context * context, Store * store, nix_get_string_callback callback, void * user_data);
-    m.def("nix_store_get_storedir", &nix_store_get_storedir, "Get the storeDir of a Nix store, typically `\"/nix/store\"`");
+    m.def("nix_store_get_storedir", &nix_store_get_storedir_wrapper, "Get the storeDir of a Nix store, typically `\"/nix/store\"`");
     //StorePath * nix_store_parse_path(nix_c_context * context, Store * store, const char * path);
     m.def("nix_store_parse_path", &nix_store_parse_path, "Parse a Nix store path into a StorePath");
     //void nix_store_path_name(const StorePath * store_path, nix_get_string_callback callback, void * user_data);
