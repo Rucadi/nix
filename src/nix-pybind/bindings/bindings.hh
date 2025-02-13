@@ -6,9 +6,8 @@
 #include <nix_api_store_internal.h>
 #include <nix_api_flake_internal.hh>
 #include <nix_api_util.h>
-#include <nix_api_store.h>
 #include <nix_api_expr.h>
-#include <nix_api_value.h>
+#include <nix_api_store.h>
 #include <nix_api_flake.h>
 
 #include <pybind11/stl.h>
@@ -23,7 +22,6 @@ void init_libstore(pybind11::module_ &);
 
 struct CallbackData
 {
-
     pybind11::function py_func;
     pybind11::object user_data;
 };
