@@ -1,45 +1,24 @@
-#include <nix_api_util_internal.h>
-
-#include <nix_api_util.h>
-#include <nix_api_store.h>
-#include <nix_api_expr.h>
-#include <nix_api_value.h>
-
-#include <pybind11/stl.h>
-#include <pybind11/pybind11.h>
+#include "bindings.hh"
 namespace py = pybind11;
 
 
-
-
-// Struct to hold Python callback & optional user data
-struct CallbackData {
-    py::function py_func;
-    py::object user_data;  // Optional Python user data
-};
-
-// Wrapper function that converts nix_get_string_callback to a Python function
-void nix_callback_wrapper(const char *start, unsigned int n, void *user_data) {
-    auto *cb_data = static_cast<CallbackData *>(user_data);
-    if (cb_data) {
-        try {
-            cb_data->py_func(std::string(start, n), cb_data->user_data);  // Call the Python function
-        } catch (const py::error_already_set &e) {
-            PyErr_Print();  // Handle Python exceptions
-        }
-    }
-}
-
-// nix_err nix_setting_get(nix_c_context * context, const char * key, nix_get_string_callback callback, void * user_data)
 int nix_setting_get_wrapper(nix_c_context* context, const char *key, py::object py_callback, py::object user_data = py::none()) {
-    CallbackData cb_data{py_callback, user_data};  // Allocate callback data
-    return nix_setting_get(context, key, nix_callback_wrapper, &cb_data);
+    CallbackData cb_data{py_callback, user_data};
+    return nix_setting_get(context, key, nix_get_string_callback_trampoline, &cb_data);
 }
 
+int nix_err_info_msg_wrapper(nix_c_context* context, const nix_c_context* read_context, py::object py_callback, py::object user_data = py::none()) {
+    CallbackData cb_data{py_callback, user_data};
+    return nix_err_info_msg(context, read_context, nix_get_string_callback_trampoline, &cb_data);
+}
+
+int nix_err_name_wrapper(nix_c_context* context, const nix_c_context* read_context, py::object py_callback, py::object user_data = py::none()) {
+    CallbackData cb_data{py_callback, user_data};
+    return nix_err_name(context, read_context, nix_get_string_callback_trampoline, &cb_data);
+}
 
 void init_libutil(py::module_ &m) {
 
-  // Binding the nix_err enum
     py::enum_<nix_err>(m, "NixErr")
         .value("NIX_OK", nix_err::NIX_OK)
         .value("NIX_ERR_UNKNOWN", nix_err::NIX_ERR_UNKNOWN)
@@ -71,9 +50,9 @@ void init_libutil(py::module_ &m) {
     //const char * nix_err_msg(nix_c_context * context, const nix_c_context * ctx, unsigned int * n);
     m.def("nix_err_msg", &nix_err_msg, "Get the most recent error message from a context");
     //nix_err nix_err_info_msg(nix_c_context * context, const nix_c_context * read_context, nix_get_string_callback callback, void * user_data);
-    m.def("nix_err_info_msg", &nix_err_info_msg, "Get the error message from errorInfo in a context");
+    m.def("nix_err_info_msg", &nix_err_info_msg_wrapper, "Get the error message from errorInfo in a context");
     //nix_err nix_err_name(nix_c_context * context, const nix_c_context * read_context, nix_get_string_callback callback, void * user_data);
-    m.def("nix_err_name", &nix_err_name, "Get the error name from a context");
+    m.def("nix_err_name", &nix_err_name_wrapper, "Get the error name from a context");
     //nix_err nix_err_code(const nix_c_context * read_context);
     m.def("nix_err_code", &nix_err_code, "Get the most recent error code from a context");
     //nix_err nix_set_err_msg(nix_c_context * context, nix_err err, const char * msg);

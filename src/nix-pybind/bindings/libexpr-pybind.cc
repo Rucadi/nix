@@ -1,17 +1,27 @@
-#include <config-store.hh>
+#include "bindings.hh"
 
-#include <nix_api_util_internal.h>
-#include <nix_api_expr_internal.h>
-#include <nix_api_store_internal.h>
-#include <nix_api_util.h>
-#include <nix_api_store.h>
-#include <nix_api_expr.h>
-#include <nix_api_value.h>
-
-#include <pybind11/stl.h>
-#include <pybind11/pybind11.h>
 namespace py = pybind11;
 
+
+void nix_gc_finalizer_trampoline(void* obj, void* cd) {
+    if (!cd) return;  // Ensure callback data is valid
+
+    auto* callback_data = static_cast<CallbackData*>(cd);
+
+    try {
+        pybind11::gil_scoped_acquire gil;  // Ensure GIL is held when calling Python
+        callback_data->py_func(py::cast(obj), callback_data->user_data);  // Call Python function
+    } catch (const py::error_already_set& e) {
+        PyErr_WriteUnraisable(e.type().ptr());
+    }
+
+    delete callback_data;  // Clean up memory after finalizer is called
+}
+
+void nix_gc_register_finalizer_wrapper(py::object obj, py::function py_callback, py::object user_data = py::none()) {
+    auto* callback_data = new CallbackData{py_callback, user_data};
+    nix_gc_register_finalizer(obj.ptr(), callback_data, nix_gc_finalizer_trampoline);
+}
 
 nix_err nix_eval_state_builder_set_lookup_path_wrapper(
     nix_c_context* context,
@@ -107,7 +117,7 @@ void init_libexpr(py::module_ &m) {
     //void nix_gc_now();
     m.def("nix_gc_now", &nix_gc_now, "Run the garbage collector");
     //void nix_gc_register_finalizer(void * obj, void * cd, void (*finalizer)(void * obj, void * cd));
-    m.def("nix_gc_register_finalizer", &nix_gc_register_finalizer, "Register a finalizer for an object");
+    m.def("nix_gc_register_finalizer", &nix_gc_register_finalizer_wrapper, "Register a finalizer for an object");
 /**/
         
 }

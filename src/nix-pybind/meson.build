@@ -46,10 +46,11 @@ configdata.set_quoted('PACKAGE_VERSION', meson.project_version())
 
 # Define sources for each binding module
 sources = [
-    'bindings/bindings.cpp',
-    'bindings/libstore_bindings.cpp',
-    'bindings/libutil_bindings.cpp',
-    'bindings/libexpr_bindings.cpp',
+    'bindings/bindings.cc',
+    'bindings/libstore-pybind.cc',
+    'bindings/libutil-pybind.cc',
+    'bindings/libexpr-pybind.cc',
+    'bindings/libflake-pybind.cc',
 ]
 
 # Include paths for Nix libraries
