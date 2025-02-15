@@ -79,15 +79,8 @@ nix_value_call_multi_wrapper(nix_c_context * context, EvalState * state, py::obj
     return nix_value_call_multi(context, state, fn_ptr, nargs, args_vec.data(), value_ptr);
 }
 
-void init_libexpr(py::module_ & m)
+void init_nix_api_expr(py::module_ & m)
 {
-
-    // define class EvalState as a struct opaque pointer
-    // m.attr("EvalState") = py::capsule((void*)nullptr, static_cast<PyCapsule_Destructor>(nullptr));
-    py::class_<nix_value>(m, "nix_value").def(py::init<>());
-    py::class_<EvalState>(m, "EvalState");
-
-    py::class_<nix_eval_state_builder>(m, "nix_eval_state_builder");
 
     /* Header nix_api_expr.h */
     m.def("nix_libexpr_init", &nix_libexpr_init, "Initialize the Nix language evaluator");
@@ -132,4 +125,180 @@ void init_libexpr(py::module_ & m)
     // void nix_gc_register_finalizer(void * obj, void * cd, void (*finalizer)(void * obj, void * cd));
     m.def("nix_gc_register_finalizer", &nix_gc_register_finalizer_wrapper, "Register a finalizer for an object");
     /**/
+}
+
+nix_err nix_get_string_wrapper(
+    nix_c_context * context, const nix_value * value, py::object py_callback, py::object user_data = py::none())
+{
+    CallbackData cb_data{py_callback, user_data};
+    return nix_get_string(context, value, nix_get_string_callback_trampoline, &cb_data);
+}
+
+nix_value * py_nix_get_attr_byidx_wrapper(
+    nix_c_context * context, const nix_value * value, EvalState * state, unsigned int i, py::object name_obj)
+{
+    // Ensure 'name' is a list
+    if (!py::isinstance<py::list>(name_obj)) {
+        throw std::invalid_argument("Error: 'name' parameter must be a list.");
+    }
+
+    py::list name = name_obj.cast<py::list>();
+
+    const char * name_ptr = nullptr;
+
+    // Call the original C++ function
+    nix_value * result = nix_get_attr_byidx(context, value, state, i, &name_ptr);
+
+    if (!result) {
+        throw std::runtime_error("nix_get_attr_byidx returned null.");
+    }
+
+    // If name_ptr is valid, append or modify the list
+    if (name_ptr) {
+        if (name.empty()) {
+            name.append(std::string(name_ptr)); // Append if list is empty
+        } else {
+            name[0] = std::string(name_ptr); // Modify first element if present
+        }
+    } else {
+        if (name.empty()) {
+            name.append(py::none()); // Append None if list is empty
+        } else {
+            name[0] = py::none(); // Modify first element to None
+        }
+    }
+
+    return result;
+}
+
+void init_nix_api_value(py::module & m)
+{
+    // struct ExternalValue {};
+    //  Enum for ValueType
+    py::enum_<ValueType>(m, "ValueType")
+        .value("NIX_TYPE_THUNK", ValueType::NIX_TYPE_THUNK)
+        .value("NIX_TYPE_INT", ValueType::NIX_TYPE_INT)
+        .value("NIX_TYPE_FLOAT", ValueType::NIX_TYPE_FLOAT)
+        .value("NIX_TYPE_BOOL", ValueType::NIX_TYPE_BOOL)
+        .value("NIX_TYPE_STRING", ValueType::NIX_TYPE_STRING)
+        .value("NIX_TYPE_PATH", ValueType::NIX_TYPE_PATH)
+        .value("NIX_TYPE_NULL", ValueType::NIX_TYPE_NULL)
+        .value("NIX_TYPE_ATTRS", ValueType::NIX_TYPE_ATTRS)
+        .value("NIX_TYPE_LIST", ValueType::NIX_TYPE_LIST)
+        .value("NIX_TYPE_FUNCTION", ValueType::NIX_TYPE_FUNCTION)
+        .value("NIX_TYPE_EXTERNAL", ValueType::NIX_TYPE_EXTERNAL);
+
+    // Classes for BindingsBuilder, ListBuilder, PrimOp, ExternalValue, and nix_realised_string
+    py::class_<BindingsBuilder>(m, "BindingsBuilder");
+    py::class_<ListBuilder>(m, "ListBuilder");
+    py::class_<PrimOp>(m, "PrimOp");
+    // py::class_<ExternalValue>(m, "ExternalValue");
+    py::class_<nix_realised_string>(m, "nix_realised_string")
+        .def("get_buffer_start", &nix_realised_string_get_buffer_start)
+        .def("get_buffer_size", &nix_realised_string_get_buffer_size)
+        .def("get_store_path_count", &nix_realised_string_get_store_path_count)
+        .def("get_store_path", &nix_realised_string_get_store_path);
+
+    // Function prototypes converted to Pybind11 methods
+    m.def("nix_alloc_value", &nix_alloc_value, "Allocate a Nix value");
+
+    m.def(
+        "nix_value_incref",
+        &nix_value_incref,
+        "Increment the garbage collector reference counter for the given nix_value");
+
+    m.def(
+        "nix_value_decref",
+        &nix_value_decref,
+        "Decrement the garbage collector reference counter for the given nix_value");
+
+    // Value manipulation functions
+    m.def("nix_get_type", &nix_get_type, "Get value type");
+
+    m.def("nix_get_typename", &nix_get_typename, "Get type name of value as defined in the evaluator");
+
+    m.def("nix_get_bool", &nix_get_bool, "Get boolean value");
+
+    m.def("nix_get_string", &nix_get_string_wrapper, "Get the raw string");
+
+    m.def("nix_get_path_string", &nix_get_path_string, "Get path as string");
+
+    m.def("nix_get_list_size", &nix_get_list_size, "Get the length of a list");
+
+    m.def("nix_get_attrs_size", &nix_get_attrs_size, "Get the element count of an attrset");
+
+    m.def("nix_get_float", &nix_get_float, "Get float value in 64 bits");
+
+    m.def("nix_get_int", &nix_get_int, "Get int value");
+
+    m.def("nix_get_external", &nix_get_external, "Get external reference");
+
+    m.def("nix_get_list_byidx", &nix_get_list_byidx, "Get the ix'th element of a list");
+
+    m.def("nix_get_attr_byname", &nix_get_attr_byname, "Get an attribute by index");
+
+    m.def("nix_has_attr_byname", &nix_has_attr_byname, "Check if an attribute exists by name");
+
+    m.def("nix_get_attr_byidx", &py_nix_get_attr_byidx_wrapper, " Get an attribute by index in the sorted bindings");
+
+    m.def("nix_get_attr_name_byidx", &nix_get_attr_name_byidx, "Get the name of an attribute by index");
+
+    m.def("nix_init_bool", &nix_init_bool, "Set boolean value");
+
+    m.def("nix_init_string", &nix_init_string, "Set a string");
+
+    m.def("nix_init_path_string", &nix_init_path_string, "Set a path");
+
+    m.def("nix_init_float", &nix_init_float, "Set a float");
+
+    m.def("nix_init_int", &nix_init_int, "Set an int");
+
+    m.def("nix_init_null", &nix_init_null, "Set null");
+
+    m.def("nix_init_apply", &nix_init_apply, "Apply a function to an argument");
+
+    m.def("nix_init_external", &nix_init_external, "Set an external value");
+
+    m.def("nix_make_list", &nix_make_list, "Create a list from a list builder");
+
+    m.def("nix_make_list_builder", &nix_make_list_builder, "Create a list builder");
+
+    m.def("nix_list_builder_insert", &nix_list_builder_insert, "Insert bindings into a builder");
+
+    m.def("nix_list_builder_free", &nix_list_builder_free, "Free a list builder");
+
+    m.def("nix_make_attrs", &nix_make_attrs, "Create an attribute set from a bindings builder");
+
+    m.def("nix_init_primop", &nix_init_primop, "Initialize a PrimOp");
+
+    m.def("nix_copy_value", &nix_copy_value, "Copy a Nix value");
+
+    m.def("nix_make_bindings_builder", &nix_make_bindings_builder, "Create a new bindings builder");
+
+    m.def("nix_bindings_builder_insert", &nix_bindings_builder_insert, "Insert bindings into a builder");
+
+    m.def("nix_bindings_builder_free", &nix_bindings_builder_free, "Free a bindings builder");
+
+    m.def("nix_string_realise", &nix_string_realise, "Realise a string context");
+
+    m.def("nix_realised_string_get_buffer_start", &nix_realised_string_get_buffer_start, "Start of the string");
+
+    m.def("nix_realised_string_get_buffer_size", &nix_realised_string_get_buffer_size, "Size of the string");
+
+    m.def(
+        "nix_realised_string_get_store_path_count", &nix_realised_string_get_store_path_count, "Number of store paths");
+
+    m.def("nix_realised_string_get_store_path", &nix_realised_string_get_store_path, "Get a store path");
+
+    m.def("nix_realised_string_free", &nix_realised_string_free, "Free a realised string"); /**/
+}
+
+void init_libexpr(py::module_ & m)
+{
+    py::class_<nix_value>(m, "nix_value").def(py::init<>());
+    py::class_<EvalState>(m, "EvalState");
+    py::class_<nix_eval_state_builder>(m, "nix_eval_state_builder");
+
+    init_nix_api_expr(m);
+    init_nix_api_value(m);
 }

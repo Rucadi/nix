@@ -1,7 +1,7 @@
 #pragma once
 #include <config-store.hh>
-
 #include <nix_api_util_internal.h>
+
 #include <nix_api_expr_internal.h>
 #include <nix_api_store_internal.h>
 #include <nix_api_flake_internal.hh>
@@ -13,6 +13,15 @@
 #include <pybind11/stl.h>
 #include <pybind11/pybind11.h>
 
+
+
+struct ExternalValue {
+
+};
+
+struct PrimOp {
+
+};
 
 void init_libflake(pybind11::module_ &);
 void init_libutil(pybind11::module_ &);

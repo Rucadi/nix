@@ -84,12 +84,7 @@ void init_libstore(py::module_ & m)
     //nix_err nix_libstore_init_no_load_config(nix_c_context * context);
     m.def("nix_libstore_init_no_load_config", &nix_libstore_init_no_load_config);
     //Store * nix_store_open(nix_c_context * context, const char * uri, const char *** params);
-    m.def("nix_store_open",
-          &nix_store_open_wrapper,
-          py::arg("context"),
-          py::arg("uri") = "",
-          py::arg("params") = py::list(),
-          "Open a Nix store with optional URI and parameters");
+    m.def("nix_store_open", &nix_store_open_wrapper, "Open a Nix store with optional URI and parameters");
     //void nix_store_free(Store * store);
     m.def("nix_store_free", &nix_store_free, "Free a Nix store");
     //nix_err nix_store_get_uri(nix_c_context * context, Store * store, nix_get_string_callback callback, void * user_data);
@@ -115,6 +110,4 @@ void init_libstore(py::module_ & m)
     m.def("nix_store_get_version", &nix_store_get_version_wrapper, "Get the version of a Nix store");
     //nix_err nix_store_copy_closure(nix_c_context * context, Store * srcStore, Store * dstStore, StorePath * path);
     m.def("nix_store_copy_closure", &nix_store_copy_closure, "Copy the closure of a StorePath from one store to another");
-
-     
 }
