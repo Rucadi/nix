@@ -17,6 +17,15 @@ int nix_err_name_wrapper(nix_c_context* context, const nix_c_context* read_conte
     return nix_err_name(context, read_context, nix_get_string_callback_trampoline, &cb_data);
 }
 
+std::string nix_err_msg_wrapper(nix_c_context* context, const nix_c_context* read_context) {
+    unsigned int n = 0;
+    const char* msg = nix_err_msg(context, read_context, &n);
+    if (msg == nullptr) {
+        throw std::runtime_error("Error message is null");
+    }
+    return std::string(msg, n);
+}
+
 void init_libutil(py::module_ &m) {
 
     py::enum_<nix_err>(m, "NixErr")
@@ -27,7 +36,7 @@ void init_libutil(py::module_ &m) {
         .value("NIX_ERR_NIX_ERROR", nix_err::NIX_ERR_NIX_ERROR)
         .export_values();  // Expose the values to Python
 
-    py::class_<nix_c_context>(m, "nix_c_context")
+    py::class_<nix_c_context, std::unique_ptr<nix_c_context, py::nodelete>>(m, "nix_c_context")
         .def_readwrite("last_err_code", &nix_c_context::last_err_code)
         .def_readwrite("last_err", &nix_c_context::last_err)
         .def_readwrite("info", &nix_c_context::info)
@@ -40,15 +49,14 @@ void init_libutil(py::module_ &m) {
     //nix_err nix_libutil_init(nix_c_context * context);
     m.def("nix_libutil_init", &nix_libutil_init, "Initialize the Nix library utilities");
     //nix_err nix_setting_get(nix_c_context * context, const char * key, nix_get_string_callback callback, void * user_data);
-    m.def("nix_setting_get", &nix_setting_get_wrapper, "Get a setting from the Nix global configuration",
-          py::arg("context"), py::arg("key"), py::arg("callback"), py::arg("user_data") = py::none());
+    m.def("nix_setting_get", &nix_setting_get_wrapper, "Get a setting from the Nix global configuration");
     //nix_err nix_setting_set(nix_c_context * context, const char * key, const char * value);
     m.def("nix_setting_set", &nix_setting_set, "Set a setting in the Nix global configuration");
 
     //const char * nix_version_get();
     m.def("nix_version_get", &nix_version_get, "Get the Nix library version");
     //const char * nix_err_msg(nix_c_context * context, const nix_c_context * ctx, unsigned int * n);
-    m.def("nix_err_msg", &nix_err_msg, "Get the most recent error message from a context");
+    m.def("nix_err_msg", &nix_err_msg_wrapper, "Get the most recent error message from a context");
     //nix_err nix_err_info_msg(nix_c_context * context, const nix_c_context * read_context, nix_get_string_callback callback, void * user_data);
     m.def("nix_err_info_msg", &nix_err_info_msg_wrapper, "Get the error message from errorInfo in a context");
     //nix_err nix_err_name(nix_c_context * context, const nix_c_context * read_context, nix_get_string_callback callback, void * user_data);

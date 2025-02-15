@@ -4,7 +4,7 @@ namespace py = pybind11;
 
 void init_libflake(py::module_ & m)
 {
-    py::class_<nix_flake_settings>(m, "nix_flake_settings");
+    py::class_<nix_flake_settings, std::unique_ptr<nix_flake_settings, py::nodelete>>(m, "nix_flake_settings");
 
     // nix_flake_settings * nix_flake_settings_new(nix_c_context * context);
     m.def(

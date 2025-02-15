@@ -173,8 +173,6 @@ nix_value * py_nix_get_attr_byidx_wrapper(
 
 void init_nix_api_value(py::module & m)
 {
-    // struct ExternalValue {};
-    //  Enum for ValueType
     py::enum_<ValueType>(m, "ValueType")
         .value("NIX_TYPE_THUNK", ValueType::NIX_TYPE_THUNK)
         .value("NIX_TYPE_INT", ValueType::NIX_TYPE_INT)
@@ -188,18 +186,16 @@ void init_nix_api_value(py::module & m)
         .value("NIX_TYPE_FUNCTION", ValueType::NIX_TYPE_FUNCTION)
         .value("NIX_TYPE_EXTERNAL", ValueType::NIX_TYPE_EXTERNAL);
 
-    // Classes for BindingsBuilder, ListBuilder, PrimOp, ExternalValue, and nix_realised_string
     py::class_<BindingsBuilder>(m, "BindingsBuilder");
     py::class_<ListBuilder>(m, "ListBuilder");
     py::class_<PrimOp>(m, "PrimOp");
-    // py::class_<ExternalValue>(m, "ExternalValue");
+
     py::class_<nix_realised_string>(m, "nix_realised_string")
         .def("get_buffer_start", &nix_realised_string_get_buffer_start)
         .def("get_buffer_size", &nix_realised_string_get_buffer_size)
         .def("get_store_path_count", &nix_realised_string_get_store_path_count)
         .def("get_store_path", &nix_realised_string_get_store_path);
 
-    // Function prototypes converted to Pybind11 methods
     m.def("nix_alloc_value", &nix_alloc_value, "Allocate a Nix value");
 
     m.def(
@@ -295,8 +291,8 @@ void init_nix_api_value(py::module & m)
 
 void init_libexpr(py::module_ & m)
 {
-    py::class_<nix_value>(m, "nix_value").def(py::init<>());
-    py::class_<EvalState>(m, "EvalState");
+    py::class_<nix_value, std::unique_ptr<nix_value, py::nodelete>>(m, "nix_value");
+    py::class_<EvalState, std::unique_ptr<EvalState, py::nodelete>>(m, "EvalState");
     py::class_<nix_eval_state_builder>(m, "nix_eval_state_builder");
 
     init_nix_api_expr(m);
